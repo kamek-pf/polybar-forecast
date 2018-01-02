@@ -1,9 +1,10 @@
-## Weather forcast for Polybar
+## Weather forecast for Polybar
+![preview](https://github.com/kamek-pf/polybar-forecast/blob/master/screenshots/preview.png)
 
 This is a simple weather forecast module for Polybar, you need Weather Icons and Material Icons for this to work properly.
 Both are available in the AUR: 
-- Weather Icons (https://aur.archlinux.org/packages/ttf-weather-icons/)
-- Material Icons (https://aur.archlinux.org/packages/ttf-material-icons/)
+- [Weather Icons](https://aur.archlinux.org/packages/ttf-weather-icons/)
+- [Material Icons](https://aur.archlinux.org/packages/ttf-material-icons/)
 
 ### Configuration
 Look at the example TOML configuration file.
