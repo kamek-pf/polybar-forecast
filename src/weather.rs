@@ -1,6 +1,7 @@
 use serde_qs;
 use reqwest;
 use serde_json::Value;
+use failure::Error;
 
 use config::Configuration;
 
@@ -19,7 +20,7 @@ struct QueryParams {
     #[serde(rename = "APPID")] app_id: String,
     #[serde(rename = "id")] city_id: String,
     #[serde(rename = "units")] units: String,
-    cnt: i32
+    cnt: i32,
 }
 
 pub fn get_info(config: &Configuration, query: QueryType) -> Result<WeatherInfo, ServiceError> {
@@ -27,31 +28,29 @@ pub fn get_info(config: &Configuration, query: QueryType) -> Result<WeatherInfo,
         app_id: config.clone().api_key,
         city_id: config.clone().city_id,
         units: config.clone().units,
-        cnt: 1
+        cnt: 1,
     };
 
-    let qs = &serde_qs::to_string(&params).map_err(|_| ServiceError::QueryError)?;
-    
+    let qs = &serde_qs::to_string(&params).unwrap();
+
     match query {
         QueryType::Current => {
             let url = "http://api.openweathermap.org/data/2.5/weather?".to_owned() + qs;
-            let res: Value = reqwest::get(&url)
-                .map_err(|_| ServiceError::QueryError)?
-                .json()
-                .map_err(|_| ServiceError::QueryError)?;
+            let res = send_query(&url).map_err(|_| ServiceError::QueryError)?;
 
             parse_current(res).ok_or(ServiceError::ParseError)
-        },
+        }
         QueryType::Forecast => {
             let url = "http://api.openweathermap.org/data/2.5/forecast?".to_owned() + qs;
-            let res: Value = reqwest::get(&url)
-                .map_err(|_| ServiceError::QueryError)?
-                .json()
-                .map_err(|_| ServiceError::QueryError)?;
+            let res = send_query(&url).map_err(|_| ServiceError::QueryError)?;
 
             parse_forecast(res).ok_or(ServiceError::ParseError)
-        },
+        }
     }
+}
+
+fn send_query(url: &str) -> Result<Value, Error> {
+    Ok(reqwest::get(url)?.json()?)
 }
 
 fn get_icon(code: &str) -> char {

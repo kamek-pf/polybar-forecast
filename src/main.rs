@@ -45,6 +45,6 @@ fn format_output(current: WeatherInfo, forecast: WeatherInfo, unit: &str, trend:
 fn main() {
     match get_forecast() {
         Ok(forecast) => println!("{}", forecast),
-        Err(e) => println!("Forecast unavailable ({:?})", e),
+        Err(e) => println!("Forecast unavailable ({})", e),
     }
 }
