@@ -33,6 +33,7 @@ You can define your new module like this :
 [module/weather]
 type = custom/script
 exec = ~/.config/polybar/modules/forecast/polybar-forecast
+exec-if = ping openweathermap.org -c 1
 interval = 600
 label-font = 3
 ```
