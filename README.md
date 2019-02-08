@@ -37,5 +37,11 @@ exec-if = ping openweathermap.org -c 1
 interval = 600
 label-font = 3
 ```
+Don't forget to add Weather Icons to your config or it won't render correctly :
+```
+...
+font-2 = Weather Icons:size=12;0
+...
+```
 
 Then you may add your new `weather` module on your bar. 
