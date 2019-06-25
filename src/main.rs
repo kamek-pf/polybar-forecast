@@ -1,32 +1,31 @@
-extern crate reqwest;
-extern crate serde;
-extern crate serde_json;
-extern crate serde_qs;
-extern crate toml;
-
-#[macro_use]
-extern crate failure;
-#[macro_use]
-extern crate serde_derive;
-
-mod config;
 mod weather;
 
-use failure::Error;
-use config::get_config;
+use std::fmt::{self, Display};
+use std::{fs, process};
+
+use serde::Deserialize;
 use weather::{get_info, QueryType, WeatherInfo};
 
+#[derive(Debug, Deserialize, Clone)]
+pub struct Configuration {
+    pub api_key: String,
+    pub city_id: String,
+    pub units: String,
+    pub display_symbol: String,
+}
+
 fn get_forecast() -> Result<String, Error> {
-    let cfg = get_config()?;
-    let c = get_info(&cfg, QueryType::Current)?;
-    let f = get_info(&cfg, QueryType::Forecast)?;
+    let config = fs::read_to_string("config.toml")?;
+    let config = toml::from_str(&config)?;
+    let c = get_info(&config, QueryType::Current)?;
+    let f = get_info(&config, QueryType::Forecast)?;
 
     if c.temperature < f.temperature {
-        Ok(format_output(c, f, &cfg.display_symbol, ''))
+        Ok(format_output(c, f, &config.display_symbol, ''))
     } else if c.temperature > f.temperature {
-        Ok(format_output(c, f, &cfg.display_symbol, ''))
+        Ok(format_output(c, f, &config.display_symbol, ''))
     } else {
-        Ok(format_output(c, f, &cfg.display_symbol, ''))
+        Ok(format_output(c, f, &config.display_symbol, ''))
     }
 }
 
@@ -45,6 +44,48 @@ fn format_output(current: WeatherInfo, forecast: WeatherInfo, unit: &str, trend:
 fn main() {
     match get_forecast() {
         Ok(forecast) => println!("{}", forecast),
-        Err(e) => println!("Forecast unavailable ({})", e),
+        Err(e) => {
+            eprintln!("Forecast unavailable ({})", e);
+            process::exit(1);
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum Error {
+    HttpError(reqwest::Error),
+    MissingConfigFile(std::io::Error),
+    InvalidConfigFile(toml::de::Error),
+    InvalidResponse,
+}
+
+impl Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use self::Error::*;
+
+        match self {
+            HttpError(e) => write!(f, "Failed to query OpenWeatherMap: {:?}", e),
+            MissingConfigFile(e) => write!(f, "Could not find config file: {:?}", e),
+            InvalidConfigFile(e) => write!(f, "Could not parse config file as TOML: {:?}", e),
+            InvalidResponse => write!(f, "Invalid response format from OpenWeatherMap"),
+        }
+    }
+}
+
+impl From<reqwest::Error> for Error {
+    fn from(err: reqwest::Error) -> Error {
+        Error::HttpError(err)
+    }
+}
+
+impl From<toml::de::Error> for Error {
+    fn from(err: toml::de::Error) -> Error {
+        Error::InvalidConfigFile(err)
+    }
+}
+
+impl From<std::io::Error> for Error {
+    fn from(err: std::io::Error) -> Error {
+        Error::MissingConfigFile(err)
     }
 }

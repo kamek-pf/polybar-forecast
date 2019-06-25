@@ -1,9 +1,9 @@
-use serde_qs;
 use reqwest;
+use serde::Serialize;
 use serde_json::Value;
-use failure::Error;
+use serde_qs;
 
-use config::Configuration;
+use super::{Configuration, Error};
 
 pub struct WeatherInfo {
     pub icon: char,
@@ -16,41 +16,40 @@ pub enum QueryType {
 }
 
 #[derive(Debug, Serialize)]
-struct QueryParams {
-    #[serde(rename = "APPID")] app_id: String,
-    #[serde(rename = "id")] city_id: String,
-    #[serde(rename = "units")] units: String,
+struct QueryParams<'a> {
+    #[serde(rename = "APPID")]
+    app_id: &'a str,
+    #[serde(rename = "id")]
+    city_id: &'a str,
+    #[serde(rename = "units")]
+    units: &'a str,
     cnt: i32,
 }
 
-pub fn get_info(config: &Configuration, query: QueryType) -> Result<WeatherInfo, ServiceError> {
+pub fn get_info(config: &Configuration, query: QueryType) -> Result<WeatherInfo, Error> {
     let params = QueryParams {
-        app_id: config.clone().api_key,
-        city_id: config.clone().city_id,
-        units: config.clone().units,
+        app_id: &config.api_key,
+        city_id: &config.city_id,
+        units: &config.units,
         cnt: 1,
     };
 
-    let qs = &serde_qs::to_string(&params).unwrap();
+    let qs = serde_qs::to_string(&params).expect("Could not format query params");
 
     match query {
         QueryType::Current => {
-            let url = "http://api.openweathermap.org/data/2.5/weather?".to_owned() + qs;
-            let res = send_query(&url).map_err(|_| ServiceError::QueryError)?;
+            let url = "http://api.openweathermap.org/data/2.5/weather?".to_owned() + &qs;
+            let res = reqwest::get(&url)?.json()?;
 
-            parse_current(res).ok_or(ServiceError::ParseError)
+            parse_current(res).ok_or(Error::InvalidResponse)
         }
         QueryType::Forecast => {
-            let url = "http://api.openweathermap.org/data/2.5/forecast?".to_owned() + qs;
-            let res = send_query(&url).map_err(|_| ServiceError::QueryError)?;
+            let url = "http://api.openweathermap.org/data/2.5/forecast?".to_owned() + &qs;
+            let res = reqwest::get(&url)?.json()?;
 
-            parse_forecast(res).ok_or(ServiceError::ParseError)
+            parse_forecast(res).ok_or(Error::InvalidResponse)
         }
     }
-}
-
-fn send_query(url: &str) -> Result<Value, Error> {
-    Ok(reqwest::get(url)?.json()?)
 }
 
 fn get_icon(code: &str) -> char {
@@ -75,7 +74,6 @@ fn get_icon(code: &str) -> char {
     }
 }
 
-
 fn parse_current(response: Value) -> Option<WeatherInfo> {
     let icon_code = response["weather"][0]["icon"].as_str()?;
     let temperature = response["main"]["temp"].as_f64()?.round();
@@ -94,10 +92,4 @@ fn parse_forecast(response: Value) -> Option<WeatherInfo> {
         icon: get_icon(icon_code),
         temperature: temperature as i8,
     })
-}
-
-#[derive(Debug, Fail)]
-pub enum ServiceError {
-    #[fail(display = "Failed to query OpenWeatherMap")] QueryError,
-    #[fail(display = "Failed to parse response")] ParseError,
 }
