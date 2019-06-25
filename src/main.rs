@@ -1,10 +1,11 @@
 mod weather;
 
 use std::fmt::{self, Display};
-use std::{fs, process};
+use std::{env, fs, process};
+
+use weather::{get_info, QueryType, WeatherInfo};
 
 use serde::Deserialize;
-use weather::{get_info, QueryType, WeatherInfo};
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Configuration {
@@ -14,9 +15,19 @@ pub struct Configuration {
     pub display_symbol: String,
 }
 
+pub fn get_config() -> Result<Configuration, Error> {
+    let mut dir = env::current_exe()?;
+    dir.pop();
+    dir.push("config.toml");
+
+    let content = fs::read_to_string(&dir)?;
+    let decoded: Configuration = toml::from_str(&content)?;
+
+    Ok(decoded)
+}
+
 fn get_forecast() -> Result<String, Error> {
-    let config = fs::read_to_string("config.toml")?;
-    let config = toml::from_str(&config)?;
+    let config = get_config()?;
     let c = get_info(&config, QueryType::Current)?;
     let f = get_info(&config, QueryType::Forecast)?;
 
