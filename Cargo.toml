@@ -1,6 +1,6 @@
 [package]
 name = "polybar-forecast"
-version = "0.3.0"
+version = "0.3.2"
 authors = ["Bertrand \"Kamek\" Bousquet <b.kamek@gmail.com>"]
 edition = "2018"
 

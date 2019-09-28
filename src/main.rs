@@ -56,7 +56,9 @@ fn main() {
     match get_forecast() {
         Ok(forecast) => println!("{}", forecast),
         Err(e) => {
-            eprintln!("Forecast unavailable ({})", e);
+            // Line break prevents massive errors from trashing the bar,
+            // Polybar displays everything until the first line break
+            eprintln!("\nForecast unavailable ({})", e);
             process::exit(1);
         }
     }
