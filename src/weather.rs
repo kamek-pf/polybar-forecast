@@ -52,6 +52,8 @@ pub fn get_info(config: &Configuration, query: QueryType) -> Result<WeatherInfo,
     }
 }
 
+// Map icon code to icon
+// More details here: https://openweathermap.org/weather-conditions
 fn get_icon(code: &str) -> char {
     match code {
         "01d" => '',         // Clear sky - day
