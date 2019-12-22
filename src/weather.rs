@@ -3,11 +3,11 @@ use serde::Serialize;
 use serde_json::Value;
 use serde_qs;
 
-use super::{Configuration, Error};
+use crate::types::{Configuration, Error, Temperature, Unit};
 
 pub struct WeatherInfo {
     pub icon: char,
-    pub temperature: i8,
+    pub temperature: Temperature,
 }
 
 pub enum QueryType {
@@ -30,7 +30,7 @@ pub fn get_info(config: &Configuration, query: QueryType) -> Result<WeatherInfo,
     let params = QueryParams {
         app_id: &config.api_key,
         city_id: &config.city_id,
-        units: &config.units,
+        units: Unit::Celcius.to_api(),
         cnt: 1,
     };
 
@@ -82,7 +82,7 @@ fn parse_current(response: Value) -> Option<WeatherInfo> {
 
     Some(WeatherInfo {
         icon: get_icon(icon_code),
-        temperature: temperature as i8,
+        temperature: Temperature(temperature as i16, Unit::Celcius),
     })
 }
 
@@ -92,6 +92,6 @@ fn parse_forecast(response: Value) -> Option<WeatherInfo> {
 
     Some(WeatherInfo {
         icon: get_icon(icon_code),
-        temperature: temperature as i8,
+        temperature: Temperature(temperature as i16, Unit::Celcius),
     })
 }

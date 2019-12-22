@@ -1,13 +1,16 @@
 [package]
 name = "polybar-forecast"
-version = "0.3.2"
+version = "0.4.0"
 authors = ["Bertrand \"Kamek\" Bousquet <b.kamek@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-serde = { version = "1.0.87", features = ["derive"] }
-serde_qs = "0.5.0"
-serde_json = "1.0.38"
-reqwest = "0.9.9"
-toml = "0.5.1"
-openssl = { version = "0.10.16", features = ["vendored"] }
+serde = { version = "1.0.104", features = ["derive"] }
+serde_qs = "0.5.2"
+serde_json = "1.0.44"
+reqwest = "0.9.24"
+toml = "0.5.5"
+openssl = { version = "0.10.26", features = ["vendored"] }
+dirs = "2.0.2"
+handlebars = "2.0.2"
+thiserror = "1.0.9"
