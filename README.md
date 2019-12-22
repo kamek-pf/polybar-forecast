@@ -1,5 +1,7 @@
 ## Weather forecast for Polybar
-![preview](https://github.com/kamek-pf/polybar-forecast/blob/master/screenshots/preview.png)
+<p align="center">
+    <img src="https://github.com/kamek-pf/polybar-forecast/blob/master/screenshots/preview.png" />
+</p>
 
 This is a simple weather forecast module for Polybar. \
 The first number is the current temperature and the second one is a 3 hour forecast, the output is fully configurable.
