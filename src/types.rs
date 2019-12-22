@@ -31,8 +31,28 @@ pub enum Unit {
     Fahrenheit,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Eq)]
 pub struct Temperature(pub i16, pub Unit);
+
+impl PartialEq for Temperature {
+    fn eq(&self, other: &Temperature) -> bool {
+        let other = other.as_unit(self.1);
+        self.0 == other.0
+    }
+}
+
+impl PartialOrd for Temperature {
+    fn partial_cmp(&self, other: &Temperature) -> Option<Ordering> {
+        Some(self.cmp(&other))
+    }
+}
+
+impl Ord for Temperature {
+    fn cmp(&self, other: &Temperature) -> Ordering {
+        let other = other.as_unit(self.1);
+        self.0.cmp(&other.0)
+    }
+}
 
 impl Temperature {
     pub fn as_unit(self, unit: Unit) -> Temperature {
@@ -53,12 +73,6 @@ impl Temperature {
             // Identity
             _ => self,
         }
-    }
-}
-
-impl PartialOrd for Temperature {
-    fn partial_cmp(&self, other: &Temperature) -> Option<Ordering> {
-        Some(self.0.cmp(&other.0))
     }
 }
 
@@ -130,5 +144,15 @@ mod tests {
             Temperature(0, Kelvin).as_unit(Fahrenheit),
             Temperature(-459.67 as i16, Fahrenheit)
         );
+    }
+
+    #[test]
+    fn unit_cmp() {
+        use Unit::*;
+        assert!(Temperature(0, Celcius) <= Temperature(0, Celcius));
+        assert!(!(Temperature(0, Celcius) < Temperature(0, Celcius)));
+
+        assert!(Temperature(1, Celcius) > Temperature(30, Fahrenheit));
+        assert!(Temperature(100, Kelvin) < Temperature(25, Celcius));
     }
 }
