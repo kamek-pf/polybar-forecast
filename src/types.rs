@@ -4,6 +4,8 @@ use handlebars::TemplateRenderError;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+const CFG_PATH: &str = "$HOME/.config/polybar-forecast/config.toml";
+
 #[derive(Debug, Deserialize, Clone)]
 pub struct Configuration {
     pub api_key: String,
@@ -91,16 +93,13 @@ pub enum Error {
     #[error("Failed to query OpenWeatherMap: {}", _0)]
     HttpError(#[from] reqwest::Error),
 
-    #[error(
-        "Config file error, check $HOME/.config/polybar-forecast/config.toml: {}",
-        _0
-    )]
+    #[error("Config file error, please check {}: {}", CFG_PATH, _0)]
     InvalidConfigFile(#[from] toml::de::Error),
 
     #[error("Failed to render output, {}", _0)]
     InvalidTemplate(#[from] TemplateRenderError),
 
-    #[error("Could not parse config file")]
+    #[error("Could not open config file, please check {}", CFG_PATH)]
     MissingConfigFile,
 
     #[error("Invalid response from OpenWeatherMap")]
