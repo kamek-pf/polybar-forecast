@@ -16,6 +16,7 @@ Look at the example TOML configuration file.
 
 ```toml
 # Register at https://openweathermap.org to get your API key
+# If you don't want to write your key here, you can delete this line and use the OWM_API_KEY environment variable instead
 api_key = "YOUR_API_KEY"
 
 # This is for Montreal, find your city at https://openweathermap.org

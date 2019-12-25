@@ -1,4 +1,5 @@
 use std::cmp::Ordering;
+use std::{env, process};
 
 use handlebars::TemplateRenderError;
 use serde::{Deserialize, Serialize};
@@ -8,6 +9,7 @@ const CFG_PATH: &str = "$HOME/.config/polybar-forecast/config.toml";
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Configuration {
+    #[serde(default = "api_key_from_env")]
     pub api_key: String,
     pub city_id: String,
     pub display: String,
@@ -35,6 +37,17 @@ pub enum Unit {
 
 #[derive(Debug, Clone, Copy, Eq)]
 pub struct Temperature(pub i16, pub Unit);
+
+// If the api_key field is missing in the config file, we try to read it from env variables
+fn api_key_from_env() -> String {
+    match env::var("OWM_API_KEY") {
+        Ok(key) => key,
+        Err(_) => {
+            eprintln!("\nCould not find OpenWeatherMap API key. Make sure api_key is set in the config file, or the OWM_API_KEY env variable is defined");
+            process::exit(1);
+        }
+    }
+}
 
 impl PartialEq for Temperature {
     fn eq(&self, other: &Temperature) -> bool {
