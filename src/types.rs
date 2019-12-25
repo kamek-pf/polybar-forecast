@@ -1,12 +1,13 @@
 use std::cmp::Ordering;
-use std::{env, process};
+use std::{env, fs, process};
 
 use handlebars::TemplateRenderError;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use thiserror::Error;
 
 const CFG_PATH: &str = "$HOME/.config/polybar-forecast/config.toml";
 
+// Represents user configs
 #[derive(Debug, Deserialize, Clone)]
 pub struct Configuration {
     #[serde(default = "api_key_from_env")]
@@ -15,19 +16,30 @@ pub struct Configuration {
     pub display: String,
 }
 
-#[derive(Debug, Serialize)]
-pub struct Output {
-    pub temp_celcius: i16,
-    pub temp_kelvin: i16,
-    pub temp_fahrenheit: i16,
-    pub temp_icon: char,
-    pub trend: char,
-    pub forecast_celcius: i16,
-    pub forecast_kelvin: i16,
-    pub forecast_fahrenheit: i16,
-    pub forecast_icon: char,
+impl Configuration {
+    pub fn new() -> Result<Self, Error> {
+        let content = dirs::config_dir()
+            .and_then(|mut path| {
+                // Check in .config first
+                path.push("polybar-forecast/config.toml");
+                fs::read_to_string(&path).ok()
+            })
+            .or_else(|| {
+                // Otherwise, check in the same folder as the executable
+                let mut dir = env::current_exe().ok()?;
+                dir.pop();
+                dir.push("config.toml");
+                fs::read_to_string(&dir).ok()
+            })
+            .ok_or(Error::MissingConfigFile)?;
+
+        let decoded: Configuration = toml::from_str(&content)?;
+
+        Ok(decoded)
+    }
 }
 
+// Suported temperature units
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Unit {
     Kelvin,
@@ -35,19 +47,19 @@ pub enum Unit {
     Fahrenheit,
 }
 
-#[derive(Debug, Clone, Copy, Eq)]
-pub struct Temperature(pub i16, pub Unit);
-
-// If the api_key field is missing in the config file, we try to read it from env variables
-fn api_key_from_env() -> String {
-    match env::var("OWM_API_KEY") {
-        Ok(key) => key,
-        Err(_) => {
-            eprintln!("\nCould not find OpenWeatherMap API key. Make sure api_key is set in the config file, or the OWM_API_KEY env variable is defined");
-            process::exit(1);
+impl Unit {
+    pub fn to_api(&self) -> &str {
+        match self {
+            Unit::Celcius => "metric",
+            Unit::Fahrenheit => "imperial",
+            Unit::Kelvin => "kelvin",
         }
     }
 }
+
+// Wrapper type for a temperature, allows abstractions around units, conversions ...
+#[derive(Debug, Clone, Copy, Eq)]
+pub struct Temperature(pub i16, pub Unit);
 
 impl PartialEq for Temperature {
     fn eq(&self, other: &Temperature) -> bool {
@@ -91,12 +103,13 @@ impl Temperature {
     }
 }
 
-impl Unit {
-    pub fn to_api(&self) -> &str {
-        match self {
-            Unit::Celcius => "metric",
-            Unit::Fahrenheit => "imperial",
-            Unit::Kelvin => "kelvin",
+// If the api_key field is missing in the config file, we try to read it from env variables
+fn api_key_from_env() -> String {
+    match env::var("OWM_API_KEY") {
+        Ok(key) => key,
+        Err(_) => {
+            eprintln!("\nCould not find OpenWeatherMap API key. Make sure api_key is set in the config file, or the OWM_API_KEY env variable is defined");
+            process::exit(1);
         }
     }
 }

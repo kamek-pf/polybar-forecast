@@ -1,20 +1,60 @@
-use reqwest;
+use handlebars::Handlebars;
 use serde::Serialize;
 use serde_json::Value;
-use serde_qs;
 
 use crate::types::{Configuration, Error, Temperature, Unit};
 
-pub struct WeatherInfo {
-    pub icon: char,
-    pub temperature: Temperature,
+// Implements OpenWeatherMap API calls
+#[derive(Debug)]
+pub struct OpenWeatherMap<'a> {
+    config: &'a Configuration,
 }
 
+impl<'a> OpenWeatherMap<'a> {
+    pub fn new(config: &'a Configuration) -> OpenWeatherMap<'a> {
+        OpenWeatherMap { config }
+    }
+
+    pub fn get_info(&self, query: QueryType) -> Result<WeatherInfo, Error> {
+        let params = QueryParams {
+            app_id: &self.config.api_key,
+            city_id: &self.config.city_id,
+            units: Unit::Celcius.to_api(),
+            cnt: 1,
+        };
+
+        let qs = serde_qs::to_string(&params).expect("Could not format query params");
+
+        match query {
+            QueryType::Current => {
+                let url = "http://api.openweathermap.org/data/2.5/weather?".to_owned() + &qs;
+                let res = reqwest::get(&url)?.json()?;
+
+                parse_current(res).ok_or(Error::InvalidResponse)
+            }
+            QueryType::Forecast => {
+                let url = "http://api.openweathermap.org/data/2.5/forecast?".to_owned() + &qs;
+                let res = reqwest::get(&url)?.json()?;
+
+                parse_forecast(res).ok_or(Error::InvalidResponse)
+            }
+        }
+    }
+}
+
+// Output of API calls
+pub struct WeatherInfo {
+    icon: char,
+    temperature: Temperature,
+}
+
+// Type of queries we can send to OpenWeatherMap
 pub enum QueryType {
     Current,
     Forecast,
 }
 
+// Format a query string to perform HTTP calls
 #[derive(Debug, Serialize)]
 struct QueryParams<'a> {
     #[serde(rename = "APPID")]
@@ -26,29 +66,47 @@ struct QueryParams<'a> {
     cnt: i32,
 }
 
-pub fn get_info(config: &Configuration, query: QueryType) -> Result<WeatherInfo, Error> {
-    let params = QueryParams {
-        app_id: &config.api_key,
-        city_id: &config.city_id,
-        units: Unit::Celcius.to_api(),
-        cnt: 1,
-    };
+// Implements formatting functions to render weather data on the bar
+#[derive(Debug, Serialize)]
+pub struct Output {
+    temp_celcius: i16,
+    temp_kelvin: i16,
+    temp_fahrenheit: i16,
+    temp_icon: char,
+    trend: char,
+    forecast_celcius: i16,
+    forecast_kelvin: i16,
+    forecast_fahrenheit: i16,
+    forecast_icon: char,
+}
 
-    let qs = serde_qs::to_string(&params).expect("Could not format query params");
+impl Output {
+    pub fn render(
+        template: &str,
+        current: WeatherInfo,
+        forecast: WeatherInfo,
+    ) -> Result<String, Error> {
+        let mut reg = Handlebars::new();
+        reg.set_strict_mode(true);
 
-    match query {
-        QueryType::Current => {
-            let url = "http://api.openweathermap.org/data/2.5/weather?".to_owned() + &qs;
-            let res = reqwest::get(&url)?.json()?;
+        let output = Output {
+            temp_celcius: current.temperature.0,
+            temp_kelvin: current.temperature.as_unit(Unit::Kelvin).0,
+            temp_fahrenheit: current.temperature.as_unit(Unit::Fahrenheit).0,
+            temp_icon: current.icon,
+            trend: match (current.temperature, forecast.temperature) {
+                (c, f) if c < f => '',
+                (c, f) if c > f => '',
+                _ => '',
+            },
+            forecast_celcius: forecast.temperature.0,
+            forecast_kelvin: forecast.temperature.as_unit(Unit::Kelvin).0,
+            forecast_fahrenheit: forecast.temperature.as_unit(Unit::Fahrenheit).0,
+            forecast_icon: forecast.icon,
+        };
 
-            parse_current(res).ok_or(Error::InvalidResponse)
-        }
-        QueryType::Forecast => {
-            let url = "http://api.openweathermap.org/data/2.5/forecast?".to_owned() + &qs;
-            let res = reqwest::get(&url)?.json()?;
-
-            parse_forecast(res).ok_or(Error::InvalidResponse)
-        }
+        let rendered = reg.render_template(template, &output)?;
+        Ok(rendered)
     }
 }
 
