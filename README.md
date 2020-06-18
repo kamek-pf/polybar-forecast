@@ -1,3 +1,6 @@
+## Unmaintained
+[`ntfd`](https://github.com/kamek-pf/ntfd) is a lightweight replacement with more features, take a look!
+
 ## Weather forecast for Polybar
 <p align="center">
     <img src="https://github.com/kamek-pf/polybar-forecast/blob/master/screenshots/preview.png" />
